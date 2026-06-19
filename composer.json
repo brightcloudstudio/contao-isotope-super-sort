@@ -19,8 +19,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/bright-cloud-studio/contao-isotope-super-sort/issues",
-        "source": "https://github.com/bright-cloud-studio/contao-isotope-super-sort"
+        "issues": "https://github.com/brightcloudstudio/contao-isotope-super-sort/issues",
+        "source": "https://github.com/brightcloudstudio/contao-isotope-super-sort"
     },
     "require": {
         "php": "^8.1",
