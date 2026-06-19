@@ -1,0 +1,12 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    Bcs\IsotopeSuperSortBundle\:
+        resource: ../../
+        exclude: ../../{ContaoManager,DependencyInjection,Resources,BcsIsotopeSuperSortBundle.php}
+
+    # Referenced from tl_page DCA options_callback, so it must be public.
+    Bcs\IsotopeSuperSortBundle\EventListener\DataContainer\ProductOrderListener:
+        public: true

@@ -1,0 +1,166 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the bright-cloud-studio/contao-isotope-super-sort bundle.
+ *
+ * (c) Bright Cloud Studio
+ *
+ * @license LGPL-3.0-or-later
+ */
+
+namespace Bcs\IsotopeSuperSortBundle\EventListener\DataContainer;
+
+use Contao\DataContainer;
+use Doctrine\DBAL\Connection;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RouterInterface;
+
+/**
+ * Backend helpers for the Super Sort product order fields.
+ *
+ * Replaces the legacy SuperSortHelper::getProducts() which relied on the removed
+ * Isotope\Model\Product::findPublishedByCategories(). A page is an Isotope category root,
+ * so products are resolved via tl_iso_product_category.pid = the page id.
+ */
+class ProductOrderListener
+{
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly RouterInterface $router,
+        private readonly RequestStack $requestStack,
+    ) {
+    }
+
+    /**
+     * Options for the page-level order field (tl_page.iso_product_order).
+     *
+     * @return array<int, string>
+     */
+    public function getProducts(DataContainer $dc): array
+    {
+        if (!$dc->id) {
+            return [];
+        }
+
+        return $this->fetchProductOptions((int) $dc->id);
+    }
+
+    /**
+     * Options for the element-level order field (tl_content.iso_product_order).
+     *
+     * @return array<int, string>
+     */
+    public function getProductsForContent(DataContainer $dc): array
+    {
+        $pageId = $this->resolvePageId($dc);
+
+        if (null === $pageId) {
+            return [];
+        }
+
+        return $this->fetchProductOptions($pageId);
+    }
+
+    /**
+     * Renders an explanation and a "open in new window" link to edit the page-level product order.
+     */
+    public function renderPageLink(DataContainer $dc): string
+    {
+        $label = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link'][0] ?? 'Product order';
+        $pageId = $this->resolvePageId($dc);
+
+        if (null === $pageId) {
+            $message = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_nopage']
+                ?? 'Save this element first, then a link to edit the product order on the page will appear here.';
+
+            return '<div class="widget"><h3>'.$label.'</h3><p class="tl_info">'.$message.'</p></div>';
+        }
+
+        $explanation = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_explanation']
+            ?? 'The products are ordered by the "Product Sorting" defined on the page this element is on. Open the page settings to change the order, then reload this element.';
+        $linkText = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_button'] ?? 'Edit product order on the page';
+
+        $request = $this->requestStack->getCurrentRequest();
+        $href = $this->router->generate('contao_backend', array_filter([
+            'do' => 'page',
+            'act' => 'edit',
+            'id' => $pageId,
+            'ref' => $request?->attributes->get('_contao_referer_id'),
+        ]), UrlGeneratorInterface::ABSOLUTE_PATH);
+
+        $pageTitle = (string) $this->connection->fetchOne('SELECT title FROM tl_page WHERE id = ?', [$pageId]);
+
+        return '<div class="widget">'
+            .'<h3>'.$label.'</h3>'
+            .'<p class="tl_help" style="margin:0 0 9px">'.$explanation.'</p>'
+            .'<a href="'.htmlspecialchars($href, ENT_QUOTES).'" target="_blank" rel="noreferrer noopener" class="tl_submit">'
+            .htmlspecialchars($linkText, ENT_QUOTES)
+            .($pageTitle ? ' &rarr; '.htmlspecialchars($pageTitle, ENT_QUOTES) : '')
+            .'</a>'
+            .'</div>';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function fetchProductOptions(int $pageId): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT DISTINCT p.id, p.name, p.sku
+             FROM tl_iso_product p
+             INNER JOIN tl_iso_product_category c ON c.product_id = p.id
+             WHERE c.pid = :pid AND p.pid = 0
+             ORDER BY p.name',
+            ['pid' => $pageId],
+        );
+
+        $products = [];
+
+        foreach ($rows as $row) {
+            $label = (string) $row['name'];
+
+            if (!empty($row['sku'])) {
+                $label .= ' (SKU: '.$row['sku'].')';
+            }
+
+            $products[(int) $row['id']] = $label;
+        }
+
+        return $products;
+    }
+
+    /**
+     * Resolves the page a content element lives on (honouring its "define root" override).
+     */
+    private function resolvePageId(DataContainer $dc): ?int
+    {
+        if (!$dc->id) {
+            return null;
+        }
+
+        $row = $this->connection->fetchAssociative(
+            'SELECT pid, ptable, defineRoot, rootPage FROM tl_content WHERE id = ?',
+            [(int) $dc->id],
+        );
+
+        if (!$row) {
+            return null;
+        }
+
+        if ($row['defineRoot'] && $row['rootPage']) {
+            return (int) $row['rootPage'];
+        }
+
+        // Only the common case (element directly inside an article) is resolved automatically.
+        if (($row['ptable'] ?: 'tl_article') !== 'tl_article') {
+            return null;
+        }
+
+        $pageId = $this->connection->fetchOne('SELECT pid FROM tl_article WHERE id = ?', [(int) $row['pid']]);
+
+        return $pageId ? (int) $pageId : null;
+    }
+}
