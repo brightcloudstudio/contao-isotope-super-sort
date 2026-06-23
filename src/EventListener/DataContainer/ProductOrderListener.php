@@ -77,11 +77,23 @@ class ProductOrderListener
     public function renderPageLink(DataContainer $dc): string
     {
         $label = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link'][0] ?? 'Product order';
+
+        if (!$dc->id) {
+            $message = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_nopage']
+                ?? 'Save this element first, then a link to edit the product order on the page will appear here.';
+
+            return '<div class="widget"><h3>'.$label.'</h3><p class="tl_info">'.$message.'</p></div>';
+        }
+
         $pageId = $this->resolvePageId($dc);
 
         if (null === $pageId) {
-            $message = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_nopage']
-                ?? 'Save this element first, then a link to edit the product order on the page will appear here.';
+            // The element is not tied to a single page (e.g. a theme/layout content element shown on
+            // many pages), so there is no one page settings dialog to link to.
+            $message = $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_multipage']
+                ?? 'This element can appear on several pages, so each page uses its own "Product Sorting" '
+                    .'(edit it under Site Structure → the page → Product Sorting). Switch the sort order source '
+                    .'to "this element" to define a single order here instead.';
 
             return '<div class="widget"><h3>'.$label.'</h3><p class="tl_info">'.$message.'</p></div>';
         }

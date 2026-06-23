@@ -23,3 +23,4 @@ $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link'] = ['Product order'
 $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_explanation'] = 'This list is ordered by the "Product Sorting" defined on the page it is placed on. Open the page settings (in a new window), change the order and save, then reload this element.';
 $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_button'] = 'Edit product order on the page';
 $GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_nopage'] = 'Save this element first — then a link to edit the product order on the page will appear here.';
+$GLOBALS['TL_LANG']['tl_content']['iso_super_sort_page_link_multipage'] = 'This element is included through the layout and can appear on several pages, so each page uses its own "Product Sorting" (edit it under Site Structure → the page → Product Sorting). To define a single order here instead, set the sort order source to "Define the order on this element".';
