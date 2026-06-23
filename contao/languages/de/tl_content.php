@@ -13,6 +13,7 @@ $GLOBALS['TL_LANG']['tl_content']['iso_product_order'] = ['Produktsortierung', '
 $GLOBALS['TL_LANG']['tl_content']['iso_list_where'] = ['Bedingung', 'Hier können Sie eine SQL-Bedingung eingeben, um die Produkte zu filtern (wird an die WHERE-Klausel angehängt). Spaltennamen müssen dem Isotope-3-Produktschema entsprechen.'];
 $GLOBALS['TL_LANG']['tl_content']['iso_newFilter'] = ['Filterung nach neuen Produkten', 'Liste auf kürzlich hinzugefügte („neue“) bzw. nicht neue („alte“) Produkte beschränken. Leer lassen, um alle Produkte anzuzeigen.'];
 $GLOBALS['TL_LANG']['tl_content']['iso_newFilter_options'] = [
+    'show_all' => 'Alle Produkte anzeigen',
     'show_new' => 'Nur neue Produkte anzeigen',
     'show_old' => 'Nur alte Produkte anzeigen',
 ];

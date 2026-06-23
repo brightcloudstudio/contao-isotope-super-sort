@@ -13,6 +13,7 @@ $GLOBALS['TL_LANG']['tl_content']['iso_product_order'] = ['Product Sorting', 'Or
 $GLOBALS['TL_LANG']['tl_content']['iso_list_where'] = ['Condition', 'Here you can enter a raw SQL condition to filter the products (appended to the query WHERE clause). Column names must match the Isotope 3 product schema.'];
 $GLOBALS['TL_LANG']['tl_content']['iso_newFilter'] = ['Filtering for new products', 'Limit the list to products added recently ("new") or not ("old"). Leave blank to show all products.'];
 $GLOBALS['TL_LANG']['tl_content']['iso_newFilter_options'] = [
+    'show_all' => 'Show all products',
     'show_new' => 'Show only new products',
     'show_old' => 'Show only old products',
 ];

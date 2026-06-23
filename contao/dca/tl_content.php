@@ -43,9 +43,10 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['iso_newFilter'] = [
     'label' => &$GLOBALS['TL_LANG']['tl_content']['iso_newFilter'],
     'exclude' => true,
     'inputType' => 'select',
-    'options' => ['show_new', 'show_old'],
+    'default' => 'show_all',
+    'options' => ['show_all', 'show_new', 'show_old'],
     'reference' => &$GLOBALS['TL_LANG']['tl_content']['iso_newFilter_options'],
-    'eval' => ['includeBlankOption' => true, 'tl_class' => 'w50'],
+    'eval' => ['tl_class' => 'w50'],
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['iso_newPeriod'] = [

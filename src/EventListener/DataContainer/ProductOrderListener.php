@@ -51,17 +51,24 @@ class ProductOrderListener
     /**
      * Options for the element-level order field (tl_content.iso_product_order).
      *
+     * Super Sort lists are usually filtered by a product attribute (e.g. the "category" condition)
+     * rather than by the page's Isotope category, so scoping the picker to a category page would
+     * leave it empty. When the element defines a root category we honour it; otherwise we offer all
+     * products. Picks that are not actually in the rendered list are simply ignored when ordering.
+     *
      * @return array<int, string>
      */
     public function getProductsForContent(DataContainer $dc): array
     {
-        $pageId = $this->resolvePageId($dc);
+        $row = $dc->id
+            ? $this->connection->fetchAssociative('SELECT defineRoot, rootPage FROM tl_content WHERE id = ?', [(int) $dc->id])
+            : false;
 
-        if (null === $pageId) {
-            return [];
+        if ($row && $row['defineRoot'] && $row['rootPage']) {
+            return $this->fetchProductOptions((int) $row['rootPage']);
         }
 
-        return $this->fetchProductOptions($pageId);
+        return $this->fetchAllProductOptions();
     }
 
     /**
@@ -117,6 +124,28 @@ class ProductOrderListener
             ['pid' => $pageId],
         );
 
+        return $this->buildProductLabels($rows);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function fetchAllProductOptions(): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT id, name, sku FROM tl_iso_product WHERE pid = 0 ORDER BY name',
+        );
+
+        return $this->buildProductLabels($rows);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     *
+     * @return array<int, string>
+     */
+    private function buildProductLabels(array $rows): array
+    {
         $products = [];
 
         foreach ($rows as $row) {
