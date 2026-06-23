@@ -26,12 +26,17 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['rootPage']['sql'] = ['type' => 'inte
 
 // Legacy Isotope 2 ProductList fields that Isotope 3 dropped. Re-added here so the migrated
 // Super Sort elements can keep using them (see SuperSortListController::findProducts).
+//
+// These are declared WITHOUT an 'sql' key on purpose: like Isotope 3's own list fields
+// (iso_category_scope, iso_filterQuery, …) they are Contao virtual fields stored in
+// tl_content.jsonData. That is also where Isotope's module→element migration left the legacy
+// values, so they are read back automatically with no data migration. SuperSortVirtualFieldsMigration
+// drops the real columns if an earlier (incorrect) version of this bundle created them.
 $GLOBALS['TL_DCA']['tl_content']['fields']['iso_list_where'] = [
     'label' => &$GLOBALS['TL_LANG']['tl_content']['iso_list_where'],
     'exclude' => true,
     'inputType' => 'text',
     'eval' => ['tl_class' => 'long clr'],
-    'sql' => ['type' => 'string', 'length' => 255, 'default' => ''],
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['iso_newFilter'] = [
@@ -41,15 +46,14 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['iso_newFilter'] = [
     'options' => ['show_new', 'show_old'],
     'reference' => &$GLOBALS['TL_LANG']['tl_content']['iso_newFilter_options'],
     'eval' => ['includeBlankOption' => true, 'tl_class' => 'w50'],
-    'sql' => ['type' => 'string', 'length' => 16, 'default' => ''],
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['iso_newPeriod'] = [
     'label' => &$GLOBALS['TL_LANG']['tl_content']['iso_newPeriod'],
     'exclude' => true,
     'inputType' => 'text',
+    'default' => 30,
     'eval' => ['rgxp' => 'natural', 'tl_class' => 'w50'],
-    'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 30],
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['iso_super_sort_source_element'] = 'iso_product_order';

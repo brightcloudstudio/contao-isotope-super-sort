@@ -43,15 +43,9 @@ class SuperSortModuleToElementMigration extends AbstractMigration
             return false;
         }
 
-        $content = $schemaManager->introspectTableByUnquotedName('tl_content');
-
-        // Defer until the schema step has created the columns this migration writes to, so the
-        // legacy values land in real columns instead of being shovelled into jsonData.
-        if (
-            !$content->hasColumn('jsonData')
-            || !$content->hasColumn('iso_list_where')
-            || !$content->hasColumn('iso_newFilter')
-        ) {
+        // The legacy iso_list_where / iso_newFilter values are virtual fields: they live in
+        // tl_content.jsonData (see createContentElement), so we only need the jsonData column.
+        if (!$schemaManager->introspectTableByUnquotedName('tl_content')->hasColumn('jsonData')) {
             return false;
         }
 
@@ -101,17 +95,6 @@ class SuperSortModuleToElementMigration extends AbstractMigration
         $tableData['ptable'] = 'tl_theme';
         $tableData['title'] = $data['name'];
 
-        // Try to express the legacy raw SQL "Condition" as an Isotope 3 filter query. On success the
-        // raw SQL is cleared; anything we cannot translate stays in iso_list_where as a fallback.
-        if (!empty($tableData['iso_list_where']) && empty($tableData['iso_filterQuery'])) {
-            $filterQuery = $this->translateCondition((string) $tableData['iso_list_where']);
-
-            if (null !== $filterQuery) {
-                $tableData['iso_filterQuery'] = $filterQuery;
-                $tableData['iso_list_where'] = '';
-            }
-        }
-
         $this->connection->insert('tl_content', [
             ...$tableData,
             'jsonData' => json_encode($jsonData, JSON_THROW_ON_ERROR),
@@ -128,63 +111,6 @@ class SuperSortModuleToElementMigration extends AbstractMigration
         $this->connection->delete('tl_module', ['id' => $data['id']]);
 
         return $contentId;
-    }
-
-    /**
-     * Best-effort translation of a legacy raw SQL "Condition" into the Isotope 3 filter query DSL
-     * (attribute + operator + value, multiple clauses joined by ";"). Deliberately conservative:
-     * only simple "column <op> value" clauses joined by AND are handled; anything else (functions
-     * such as LOCATE(), OR, sub-expressions, comma/quote-bearing values) returns null so the caller
-     * keeps the original raw SQL as a fallback.
-     */
-    private function translateCondition(string $sql): ?string
-    {
-        $sql = trim($sql);
-
-        // Strip a single pair of wrapping parentheses, e.g. "(name='foo')".
-        if (str_starts_with($sql, '(') && str_ends_with($sql, ')')) {
-            $sql = trim(substr($sql, 1, -1));
-        }
-
-        if ('' === $sql || preg_match('/\bOR\b/i', $sql)) {
-            return null;
-        }
-
-        // SQL operator => Isotope 3 filter-query operator.
-        $operatorMap = [
-            '!=' => '!',
-            '<>' => '!',
-            '>=' => '≥',
-            '<=' => '≤',
-            '=' => ':',
-            '>' => '>',
-            '<' => '<',
-        ];
-
-        $clauses = preg_split('/\s+AND\s+/i', $sql);
-        $filters = [];
-
-        foreach ($clauses as $clause) {
-            if (!preg_match('/^\(?\s*([a-zA-Z_]\w*)\s*(!=|<>|>=|<=|=|>|<)\s*(.+?)\s*\)?$/', trim($clause), $m)) {
-                return null;
-            }
-
-            $value = trim($m[3]);
-
-            // Unwrap a single-/double-quoted value; reject if quotes are unbalanced.
-            if (preg_match("/^'(.*)'$/", $value, $q) || preg_match('/^"(.*)"$/', $value, $q)) {
-                $value = $q[1];
-            }
-
-            // Reject values that would break the DSL or hint at SQL functions/expressions.
-            if ('' === $value || preg_match('/[;()\'",]/', $value)) {
-                return null;
-            }
-
-            $filters[] = $m[1].$operatorMap[$m[2]].$value;
-        }
-
-        return [] === $filters ? null : implode(';', $filters);
     }
 
     private function updateLayouts(array $mapping): void

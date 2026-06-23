@@ -119,9 +119,12 @@ class SuperSortListController extends AbstractContentElementController
             $productQuery?->applySearch($qb, $searchFields, $filterKeys);
         }
 
-        // --- Legacy Isotope 2 "Condition": raw SQL appended verbatim to the WHERE clause. ---
+        // --- Legacy Isotope 2 "Condition": raw SQL appended to the WHERE clause. ---
+        // Legacy conditions reference product columns unqualified (e.g. "LOCATE('515',category)").
+        // The Isotope 3 query joins tl_iso_product to itself, so a bare column is ambiguous; qualify
+        // any product column to tl_iso_product.<col> before applying.
         if ($model->iso_list_where) {
-            $qb->andWhere($model->iso_list_where);
+            $qb->andWhere($this->qualifyProductColumns((string) $model->iso_list_where));
         }
 
         // --- Legacy Isotope 2 "Filtering for new products": new/old by dateAdded window. ---
@@ -190,6 +193,37 @@ class SuperSortListController extends AbstractContentElementController
         }
 
         return array_merge($ordered, array_values($remaining));
+    }
+
+    /**
+     * Prefixes unqualified tl_iso_product column references in a raw legacy condition with the
+     * "tl_iso_product." table alias, leaving string literals and already-qualified references
+     * untouched. This keeps legacy SQL such as "LOCATE('515',category)" working against the
+     * Isotope 3 query, where tl_iso_product is self-joined and a bare column would be ambiguous.
+     */
+    private function qualifyProductColumns(string $condition): string
+    {
+        static $columns = null;
+
+        if (null === $columns) {
+            $columns = array_map(
+                static fn ($column) => $column->getName(),
+                $this->connection->createSchemaManager()->introspectTableByUnquotedName('tl_iso_product')->getColumns(),
+            );
+        }
+
+        return preg_replace_callback(
+            '/\'[^\']*\'|"[^"]*"|(?<![\w.])([A-Za-z_]\w*)/',
+            static function (array $match) use ($columns): string {
+                // Quoted literals (groups 1/2 empty) are returned verbatim.
+                if (!isset($match[1]) || '' === $match[1]) {
+                    return $match[0];
+                }
+
+                return \in_array($match[1], $columns, true) ? 'tl_iso_product.'.$match[1] : $match[0];
+            },
+            $condition,
+        ) ?? $condition;
     }
 
     private function prepareQueryBuilder(array $categories, string $locale): QueryBuilder
