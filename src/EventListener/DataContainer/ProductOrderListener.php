@@ -61,11 +61,29 @@ class ProductOrderListener
     public function getProductsForContent(DataContainer $dc): array
     {
         $row = $dc->id
-            ? $this->connection->fetchAssociative('SELECT defineRoot, rootPage FROM tl_content WHERE id = ?', [(int) $dc->id])
+            ? $this->connection->fetchAssociative('SELECT defineRoot, rootPage, jsonData FROM tl_content WHERE id = ?', [(int) $dc->id])
             : false;
 
-        if ($row && $row['defineRoot'] && $row['rootPage']) {
+        if (!$row) {
+            return $this->fetchAllProductOptions();
+        }
+
+        // A defined root category takes precedence (matches the list's category scope).
+        if ($row['defineRoot'] && $row['rootPage']) {
             return $this->fetchProductOptions((int) $row['rootPage']);
+        }
+
+        // Otherwise scope the picker to the element's own "Condition" (iso_list_where), so the
+        // editor sees exactly the products this list shows. Falls back to all products if the
+        // condition is empty or not a valid stand-alone WHERE clause.
+        $condition = $this->getListWhere($row['jsonData']);
+
+        if ('' !== $condition) {
+            $products = $this->fetchProductOptionsByCondition($condition);
+
+            if (null !== $products) {
+                return $products;
+            }
         }
 
         return $this->fetchAllProductOptions();
@@ -149,6 +167,40 @@ class ProductOrderListener
         );
 
         return $this->buildProductLabels($rows);
+    }
+
+    /**
+     * Scopes the picker to the products matching a legacy "Condition" (iso_list_where). The
+     * condition runs against tl_iso_product alone (no self-join), so unqualified columns such as
+     * "category" are unambiguous here. Returns null if the SQL is invalid so the caller can fall back.
+     *
+     * @return array<int, string>|null
+     */
+    private function fetchProductOptionsByCondition(string $condition): ?array
+    {
+        try {
+            $rows = $this->connection->fetchAllAssociative(
+                'SELECT id, name, sku FROM tl_iso_product WHERE pid = 0 AND ('.$condition.') ORDER BY name',
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $this->buildProductLabels($rows);
+    }
+
+    /**
+     * Reads the element's iso_list_where condition from its jsonData (it is a virtual field).
+     */
+    private function getListWhere(mixed $jsonData): string
+    {
+        if (!\is_string($jsonData) || '' === $jsonData) {
+            return '';
+        }
+
+        $data = json_decode($jsonData, true);
+
+        return \is_array($data) && \is_string($data['iso_list_where'] ?? null) ? trim($data['iso_list_where']) : '';
     }
 
     /**
