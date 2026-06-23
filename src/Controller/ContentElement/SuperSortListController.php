@@ -230,9 +230,16 @@ class SuperSortListController extends AbstractContentElementController
             $pageModel = PageModel::findWithDetails($pageId);
         }
 
+        $pageModel = $pageModel ?: $this->getPageModel();
+
+        // Without a page we cannot scope categories; bail out instead of fataling in getIds().
+        if (!$pageModel instanceof PageModel) {
+            return [];
+        }
+
         return $this->categoryFinder->getIds(
             CategoryScope::tryFrom($model->iso_category_scope) ?? $model->iso_category_scope,
-            $pageModel ?: $this->getPageModel(),
+            $pageModel,
             $product instanceof CoreProduct ? $product : null,
         );
     }

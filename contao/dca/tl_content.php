@@ -18,6 +18,12 @@ $GLOBALS['TL_DCA']['tl_content']['palettes']['iso_super_sort_list'] = '{type_leg
 
 $GLOBALS['TL_DCA']['tl_content']['palettes']['__selector__'][] = 'iso_super_sort_source';
 
+// Isotope declares the "defineRoot"/"rootPage" fields without an SQL key, so the install tool
+// never creates the columns. This element reads them explicitly (see ProductOrderListener and
+// SuperSortListController), so make sure the columns exist.
+$GLOBALS['TL_DCA']['tl_content']['fields']['defineRoot']['sql'] = ['type' => 'boolean', 'default' => false];
+$GLOBALS['TL_DCA']['tl_content']['fields']['rootPage']['sql'] = ['type' => 'integer', 'unsigned' => true, 'default' => 0];
+
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['iso_super_sort_source_element'] = 'iso_product_order';
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['iso_super_sort_source_page'] = 'iso_super_sort_page_link';
 
