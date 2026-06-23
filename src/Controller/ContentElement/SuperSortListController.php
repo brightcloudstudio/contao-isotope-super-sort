@@ -119,6 +119,21 @@ class SuperSortListController extends AbstractContentElementController
             $productQuery?->applySearch($qb, $searchFields, $filterKeys);
         }
 
+        // --- Legacy Isotope 2 "Condition": raw SQL appended verbatim to the WHERE clause. ---
+        if ($model->iso_list_where) {
+            $qb->andWhere($model->iso_list_where);
+        }
+
+        // --- Legacy Isotope 2 "Filtering for new products": new/old by dateAdded window. ---
+        if ('show_new' === $model->iso_newFilter || 'show_old' === $model->iso_newFilter) {
+            $threshold = time() - ((int) ($model->iso_newPeriod ?: 30)) * 86400;
+            $operator = 'show_new' === $model->iso_newFilter ? '>=' : '<';
+            $qb
+                ->andWhere("tl_iso_product.dateAdded $operator :ssNewThreshold")
+                ->setParameter('ssNewThreshold', $threshold)
+            ;
+        }
+
         if ($model->numberOfItems > 0) {
             $qb->setMaxResults((int) $model->numberOfItems);
         }
