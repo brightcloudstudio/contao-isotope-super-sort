@@ -120,11 +120,12 @@ class SuperSortListController extends AbstractContentElementController
         }
 
         // --- Legacy Isotope 2 "Condition": raw SQL appended to the WHERE clause. ---
-        // Legacy conditions reference product columns unqualified (e.g. "LOCATE('515',category)").
-        // The Isotope 3 query joins tl_iso_product to itself, so a bare column is ambiguous; qualify
-        // any product column to tl_iso_product.<col> before applying.
+        // Contao entity-encodes special characters such as ( ) ' on save, so decode first. Legacy
+        // conditions also reference product columns unqualified (e.g. "LOCATE('515',category)"); the
+        // Isotope 3 query joins tl_iso_product to itself, so qualify them to tl_iso_product.<col>.
         if ($model->iso_list_where) {
-            $qb->andWhere($this->qualifyProductColumns((string) $model->iso_list_where));
+            $condition = $this->qualifyProductColumns(ContaoStringUtil::decodeEntities((string) $model->iso_list_where));
+            $qb->andWhere($condition);
         }
 
         // --- Legacy Isotope 2 "Filtering for new products": new/old by dateAdded window. ---

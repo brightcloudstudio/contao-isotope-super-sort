@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Bcs\IsotopeSuperSortBundle\EventListener\DataContainer;
 
 use Contao\DataContainer;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -200,7 +201,12 @@ class ProductOrderListener
 
         $data = json_decode($jsonData, true);
 
-        return \is_array($data) && \is_string($data['iso_list_where'] ?? null) ? trim($data['iso_list_where']) : '';
+        if (!\is_array($data) || !\is_string($data['iso_list_where'] ?? null)) {
+            return '';
+        }
+
+        // Contao entity-encodes ( ) ' etc. on save; decode so the condition is valid SQL.
+        return trim(StringUtil::decodeEntities($data['iso_list_where']));
     }
 
     /**

@@ -36,7 +36,9 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['iso_list_where'] = [
     'label' => &$GLOBALS['TL_LANG']['tl_content']['iso_list_where'],
     'exclude' => true,
     'inputType' => 'text',
-    'eval' => ['tl_class' => 'long clr'],
+    // decodeEntities/preserveTags keep the raw SQL (parentheses, quotes) readable and unencoded;
+    // the controller also decodes at runtime as a safety net for already-encoded values.
+    'eval' => ['decodeEntities' => true, 'preserveTags' => true, 'tl_class' => 'long clr'],
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['iso_newFilter'] = [
